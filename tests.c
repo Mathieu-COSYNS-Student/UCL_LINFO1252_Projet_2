@@ -43,8 +43,23 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    int ret = check_archive(fd);
+    int ret;
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = check_archive(fd);
     printf("check_archive returned %d\n", ret);
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = exists(fd, "lib_tar.h");
+    printf("exists returned %d\n", ret);
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = exists(fd, "Makefile");
+    printf("exists returned %d\n", ret);
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = exists(fd, "nope");
+    printf("exists returned %d\n", ret);
 
     close(fd);
 

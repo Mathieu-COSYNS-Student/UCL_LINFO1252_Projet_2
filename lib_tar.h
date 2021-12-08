@@ -6,10 +6,11 @@
 #include <unistd.h>
 
 #define BLOCKSIZE 512
+#define NAMELEN 100
 
 typedef struct __attribute__((packed)) posix_header
 {                              /* byte offset */
-    char name[100];               /*   0 */
+    char name[NAMELEN];           /*   0 */
     char mode[8];                 /* 100 */
     char uid[8];                  /* 108 */
     char gid[8];                  /* 116 */
@@ -103,7 +104,6 @@ int is_file(int tar_fd, char *path);
  *         any other value otherwise.
  */
 int is_symlink(int tar_fd, char *path);
-
 
 /**
  * Lists the entries at a given path in the archive.

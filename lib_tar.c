@@ -134,6 +134,22 @@ int check_archive(int tar_fd)
     return header_count;
 }
 
+bool exists_and_read_header(int tar_fd, char *path, tar_header_t *tar_header)
+{
+    __off_t end_of_file_empty_blocks_pos = get_end_of_file_empty_blocks_pos(tar_fd);
+    read_header(tar_fd, tar_header);
+
+    do
+    {
+        if (!strncmp(tar_header->name, path, NAMELEN))
+        {
+            return true;
+        }
+    } while (seek_and_read_header(tar_fd, tar_header, end_of_file_empty_blocks_pos));
+
+    return false;
+}
+
 /**
  * Checks whether an entry exists in the archive.
  *
@@ -145,7 +161,8 @@ int check_archive(int tar_fd)
  */
 int exists(int tar_fd, char *path)
 {
-    return 0;
+    tar_header_t tar_header;
+    return exists_and_read_header(tar_fd, path, &tar_header);
 }
 
 /**
@@ -159,7 +176,8 @@ int exists(int tar_fd, char *path)
  */
 int is_dir(int tar_fd, char *path)
 {
-    return 0;
+    tar_header_t tar_header;
+    return exists_and_read_header(tar_fd, path, &tar_header) && tar_header.typeflag == DIRTYPE;
 }
 
 /**
@@ -173,7 +191,8 @@ int is_dir(int tar_fd, char *path)
  */
 int is_file(int tar_fd, char *path)
 {
-    return 0;
+    tar_header_t tar_header;
+    return exists_and_read_header(tar_fd, path, &tar_header) && (tar_header.typeflag == REGTYPE || tar_header.typeflag == AREGTYPE);
 }
 
 /**
@@ -186,7 +205,8 @@ int is_file(int tar_fd, char *path)
  */
 int is_symlink(int tar_fd, char *path)
 {
-    return 0;
+    tar_header_t tar_header;
+    return exists_and_read_header(tar_fd, path, &tar_header) && (tar_header.typeflag == LNKTYPE || tar_header.typeflag == SYMTYPE);
 }
 
 /**
