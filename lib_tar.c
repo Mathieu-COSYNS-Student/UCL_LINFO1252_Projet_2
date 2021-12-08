@@ -1,4 +1,80 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "lib_tar.h"
+
+__off_t get_end_of_file_empty_blocks_pos(int fd)
+{
+    __off_t current_pos = lseek(fd, 0L, SEEK_CUR);
+
+    __off_t empty_block_pos = lseek(fd, 0L, SEEK_END);
+    bool is_empty_block = true;
+
+    do
+    {
+        __off_t new_empty_block_pos = lseek(fd, empty_block_pos - BLOCKSIZE, SEEK_SET);
+
+        if (new_empty_block_pos > 0)
+        {
+            uint8_t buffer[BLOCKSIZE / 8] = {0};
+            int bytes_read;
+
+            do
+            {
+                bytes_read = read(fd, buffer, sizeof(buffer));
+
+                for (size_t i = 0; i < BLOCKSIZE / 8; i++)
+                {
+                    if (buffer[i] != 0)
+                    {
+                        is_empty_block = false;
+                        break;
+                    }
+                }
+
+            } while (bytes_read && bytes_read != -1);
+
+            if (is_empty_block)
+                empty_block_pos = new_empty_block_pos;
+        }
+        else
+        {
+            is_empty_block = false;
+        }
+    } while (is_empty_block);
+
+    lseek(fd, current_pos, SEEK_SET);
+
+    return empty_block_pos;
+}
+
+bool read_header(int tar_fd, tar_header_t *header)
+{
+    if (read(tar_fd, header, sizeof(tar_header_t)) != sizeof(tar_header_t))
+        return false;
+
+    return true;
+}
+
+bool seek_and_read_header(int tar_fd, tar_header_t *header, __off_t end)
+{
+    int block_file_size = TAR_INT(header->size);
+
+    if (block_file_size % 512 != 0)
+        block_file_size += (512 - block_file_size % 512);
+
+    __off_t offset = lseek(tar_fd, block_file_size, SEEK_CUR);
+
+    if (offset == -1)
+        return false;
+
+    if (offset >= end)
+        return false;
+
+    return read_header(tar_fd, header);
+}
 
 /**
  * Checks whether the archive is valid.
@@ -15,8 +91,47 @@
  *         -2 if the archive contains a header with an invalid version value,
  *         -3 if the archive contains a header with an invalid checksum value
  */
-int check_archive(int tar_fd) {
-    return 0;
+int check_archive(int tar_fd)
+{
+    tar_header_t tar_header;
+    __off_t end_of_file_empty_blocks_pos = get_end_of_file_empty_blocks_pos(tar_fd);
+    int header_count = 0;
+
+    read_header(tar_fd, &tar_header);
+
+    do
+    {
+        if (strncmp(tar_header.magic, TMAGIC, TMAGLEN))
+            return -1;
+
+        if (strncmp(tar_header.version, TVERSION, TVERSLEN))
+            return -2;
+
+        char tar_header_chksum[8];
+        for (size_t i = 0; i < 8; i++)
+        {
+            tar_header_chksum[i] = tar_header.chksum[i];
+            tar_header.chksum[i] = ' ';
+        }
+
+        unsigned int chksum = 0;
+
+        uint8_t *tar_header_bytes_ptr = (uint8_t *)&tar_header;
+
+        for (size_t i = 0; i < sizeof(tar_header_t); i++)
+        {
+            chksum += *tar_header_bytes_ptr;
+            tar_header_bytes_ptr++;
+        }
+
+        if (TAR_INT(tar_header_chksum) != chksum)
+            return -3;
+
+        header_count++;
+
+    } while (seek_and_read_header(tar_fd, &tar_header, end_of_file_empty_blocks_pos));
+
+    return header_count;
 }
 
 /**
@@ -28,7 +143,8 @@ int check_archive(int tar_fd) {
  * @return zero if no entry at the given path exists in the archive,
  *         any other value otherwise.
  */
-int exists(int tar_fd, char *path) {
+int exists(int tar_fd, char *path)
+{
     return 0;
 }
 
@@ -41,7 +157,8 @@ int exists(int tar_fd, char *path) {
  * @return zero if no entry at the given path exists in the archive or the entry is not a directory,
  *         any other value otherwise.
  */
-int is_dir(int tar_fd, char *path) {
+int is_dir(int tar_fd, char *path)
+{
     return 0;
 }
 
@@ -54,7 +171,8 @@ int is_dir(int tar_fd, char *path) {
  * @return zero if no entry at the given path exists in the archive or the entry is not a file,
  *         any other value otherwise.
  */
-int is_file(int tar_fd, char *path) {
+int is_file(int tar_fd, char *path)
+{
     return 0;
 }
 
@@ -66,10 +184,10 @@ int is_file(int tar_fd, char *path) {
  * @return zero if no entry at the given path exists in the archive or the entry is not symlink,
  *         any other value otherwise.
  */
-int is_symlink(int tar_fd, char *path) {
+int is_symlink(int tar_fd, char *path)
+{
     return 0;
 }
-
 
 /**
  * Lists the entries at a given path in the archive.
@@ -93,7 +211,8 @@ int is_symlink(int tar_fd, char *path) {
  * @return zero if no directory at the given path exists in the archive,
  *         any other value otherwise.
  */
-int list(int tar_fd, char *path, char **entries, size_t *no_entries) {
+int list(int tar_fd, char *path, char **entries, size_t *no_entries)
+{
     return 0;
 }
 
@@ -115,6 +234,7 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries) {
  *         the end of the file.
  *
  */
-ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len) {
+ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
+{
     return 0;
 }

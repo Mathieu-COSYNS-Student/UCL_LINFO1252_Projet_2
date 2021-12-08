@@ -5,7 +5,9 @@
 #include <stdint.h>
 #include <unistd.h>
 
-typedef struct posix_header
+#define BLOCKSIZE 512
+
+typedef struct __attribute__((packed)) posix_header
 {                              /* byte offset */
     char name[100];               /*   0 */
     char mode[8];                 /* 100 */
