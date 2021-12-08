@@ -50,11 +50,11 @@ int main(int argc, char **argv)
     printf("check_archive returned %d\n", ret);
 
     lseek(fd, 0L, SEEK_SET);
-    ret = exists(fd, "lib_tar.h");
+    ret = exists(fd, "ok/");
     printf("exists returned %d\n", ret);
 
     lseek(fd, 0L, SEEK_SET);
-    ret = exists(fd, "Makefile");
+    ret = exists(fd, "ok/ok_file.c");
     printf("exists returned %d\n", ret);
 
     lseek(fd, 0L, SEEK_SET);
