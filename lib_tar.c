@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include "lib_tar.h"
 
@@ -134,7 +135,7 @@ int check_archive(int tar_fd)
     return header_count;
 }
 
-bool exists_and_read_header(int tar_fd, char *path, tar_header_t *tar_header)
+bool exists_h(int tar_fd, char *path, tar_header_t *tar_header)
 {
     __off_t end_of_file_empty_blocks_pos = get_end_of_file_empty_blocks_pos(tar_fd);
     read_header(tar_fd, tar_header);
@@ -162,7 +163,12 @@ bool exists_and_read_header(int tar_fd, char *path, tar_header_t *tar_header)
 int exists(int tar_fd, char *path)
 {
     tar_header_t tar_header;
-    return exists_and_read_header(tar_fd, path, &tar_header);
+    return exists_h(tar_fd, path, &tar_header);
+}
+
+int is_dir_h(int tar_fd, char *path, tar_header_t *tar_header)
+{
+    return exists_h(tar_fd, path, tar_header) && tar_header->typeflag == DIRTYPE;
 }
 
 /**
@@ -177,7 +183,12 @@ int exists(int tar_fd, char *path)
 int is_dir(int tar_fd, char *path)
 {
     tar_header_t tar_header;
-    return exists_and_read_header(tar_fd, path, &tar_header) && tar_header.typeflag == DIRTYPE;
+    return is_dir_h(tar_fd, path, &tar_header);
+}
+
+int is_file_h(int tar_fd, char *path, tar_header_t *tar_header)
+{
+    return exists_h(tar_fd, path, tar_header) && (tar_header->typeflag == REGTYPE || tar_header->typeflag == AREGTYPE);
 }
 
 /**
@@ -192,7 +203,12 @@ int is_dir(int tar_fd, char *path)
 int is_file(int tar_fd, char *path)
 {
     tar_header_t tar_header;
-    return exists_and_read_header(tar_fd, path, &tar_header) && (tar_header.typeflag == REGTYPE || tar_header.typeflag == AREGTYPE);
+    return is_file_h(tar_fd, path, &tar_header);
+}
+
+int is_symlink_h(int tar_fd, char *path, tar_header_t *tar_header)
+{
+    return exists_h(tar_fd, path, tar_header) && (tar_header->typeflag == LNKTYPE || tar_header->typeflag == SYMTYPE);
 }
 
 /**
@@ -206,7 +222,7 @@ int is_file(int tar_fd, char *path)
 int is_symlink(int tar_fd, char *path)
 {
     tar_header_t tar_header;
-    return exists_and_read_header(tar_fd, path, &tar_header) && (tar_header.typeflag == LNKTYPE || tar_header.typeflag == SYMTYPE);
+    return is_symlink_h(tar_fd, path, &tar_header);
 }
 
 /**
@@ -256,5 +272,32 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
 {
-    return 0;
+    tar_header_t tar_header;
+
+    bool is_symlink = is_symlink_h(tar_fd, path, &tar_header);
+    lseek(tar_fd, 0L, SEEK_SET);
+
+    if (is_symlink)
+        return read_file(tar_fd, tar_header.linkname, offset, dest, len);
+
+    if (!is_file_h(tar_fd, path, &tar_header))
+        return -1;
+
+    long size = TAR_INT(tar_header.size);
+
+    if (offset >= size)
+        return -2;
+
+    lseek(tar_fd, offset, SEEK_CUR);
+    ssize_t nb_read = read(tar_fd, dest, MIN(*len, size - offset));
+
+    if (nb_read == -1)
+    {
+        perror("read_file: ");
+        exit(EXIT_FAILURE);
+    }
+
+    *len = nb_read;
+
+    return size - offset - nb_read;
 }

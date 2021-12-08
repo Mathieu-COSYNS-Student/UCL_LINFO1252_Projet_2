@@ -61,6 +61,13 @@ int main(int argc, char **argv)
     ret = exists(fd, "nope");
     printf("exists returned %d\n", ret);
 
+    lseek(fd, 0L, SEEK_SET);
+    uint8_t buffer[4];
+    size_t len = 4;
+    size_t *len_ptr = &len;
+    ret = read_file(fd, "Makefile", 1000, buffer, len_ptr);
+    printf("read_file returned %d\n", ret);
+
     close(fd);
 
     return 0;
