@@ -51,7 +51,7 @@ __off_t get_end_of_file_empty_blocks_pos(int fd)
     return empty_block_pos;
 }
 
-bool read_header(int tar_fd, tar_header_t *header)
+bool read_header(int tar_fd, tar_header_t *const header)
 {
     if (read(tar_fd, header, sizeof(tar_header_t)) != sizeof(tar_header_t))
         return false;
@@ -59,7 +59,7 @@ bool read_header(int tar_fd, tar_header_t *header)
     return true;
 }
 
-bool seek_and_read_header(int tar_fd, tar_header_t *header, __off_t end)
+bool seek_and_read_header(int tar_fd, tar_header_t *const header, __off_t end)
 {
     int block_file_size = TAR_INT(header->size);
 
@@ -135,7 +135,7 @@ int check_archive(int tar_fd)
     return header_count;
 }
 
-bool exists_h(int tar_fd, char *path, tar_header_t *tar_header)
+bool exists_h(int tar_fd, const char *const path, tar_header_t *const tar_header)
 {
     __off_t end_of_file_empty_blocks_pos = get_end_of_file_empty_blocks_pos(tar_fd);
     read_header(tar_fd, tar_header);
