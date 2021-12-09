@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     uint8_t buffer[4];
     size_t len = 4;
     size_t *len_ptr = &len;
-    ret = read_file(fd, "Makefile", 1000, buffer, len_ptr);
+    ret = read_file(fd, "ok/ok_file.c", 1000, buffer, len_ptr);
     printf("read_file returned %d\n", ret);
 
     close(fd);

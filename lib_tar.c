@@ -166,9 +166,9 @@ int exists(int tar_fd, char *path)
     return exists_h(tar_fd, path, &tar_header);
 }
 
-int is_dir_h(int tar_fd, char *path, tar_header_t *tar_header)
+bool check_is_dir(const tar_header_t *tar_header)
 {
-    return exists_h(tar_fd, path, tar_header) && tar_header->typeflag == DIRTYPE;
+    return tar_header->typeflag == DIRTYPE;
 }
 
 /**
@@ -183,12 +183,12 @@ int is_dir_h(int tar_fd, char *path, tar_header_t *tar_header)
 int is_dir(int tar_fd, char *path)
 {
     tar_header_t tar_header;
-    return is_dir_h(tar_fd, path, &tar_header);
+    return exists_h(tar_fd, path, &tar_header) && check_is_dir(&tar_header);
 }
 
-int is_file_h(int tar_fd, char *path, tar_header_t *tar_header)
+bool check_is_file(tar_header_t *tar_header)
 {
-    return exists_h(tar_fd, path, tar_header) && (tar_header->typeflag == REGTYPE || tar_header->typeflag == AREGTYPE);
+    return tar_header->typeflag == REGTYPE || tar_header->typeflag == AREGTYPE;
 }
 
 /**
@@ -203,12 +203,12 @@ int is_file_h(int tar_fd, char *path, tar_header_t *tar_header)
 int is_file(int tar_fd, char *path)
 {
     tar_header_t tar_header;
-    return is_file_h(tar_fd, path, &tar_header);
+    return exists_h(tar_fd, path, &tar_header) && check_is_file(&tar_header);
 }
 
-int is_symlink_h(int tar_fd, char *path, tar_header_t *tar_header)
+bool check_is_symlink(tar_header_t *tar_header)
 {
-    return exists_h(tar_fd, path, tar_header) && (tar_header->typeflag == LNKTYPE || tar_header->typeflag == SYMTYPE);
+    return tar_header->typeflag == LNKTYPE || tar_header->typeflag == SYMTYPE;
 }
 
 /**
@@ -222,7 +222,7 @@ int is_symlink_h(int tar_fd, char *path, tar_header_t *tar_header)
 int is_symlink(int tar_fd, char *path)
 {
     tar_header_t tar_header;
-    return is_symlink_h(tar_fd, path, &tar_header);
+    return exists_h(tar_fd, path, &tar_header) && check_is_symlink(&tar_header);
 }
 
 /**
@@ -274,13 +274,16 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
 {
     tar_header_t tar_header;
 
-    bool is_symlink = is_symlink_h(tar_fd, path, &tar_header);
-    lseek(tar_fd, 0L, SEEK_SET);
+    if (!exists_h(tar_fd, path, &tar_header))
+        return -1;
 
-    if (is_symlink)
+    if (check_is_symlink(&tar_header))
+    {
+        lseek(tar_fd, 0L, SEEK_SET);
         return read_file(tar_fd, tar_header.linkname, offset, dest, len);
+    }
 
-    if (!is_file_h(tar_fd, path, &tar_header))
+    if (!check_is_file(&tar_header))
         return -1;
 
     long size = TAR_INT(tar_header.size);
