@@ -1,1 +1,1 @@
-ok/ko.c
+ok/ok_file.c

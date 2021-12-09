@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -28,6 +29,12 @@ void debug_dump(const uint8_t *bytes, size_t len)
     }
 }
 
+void assertEquals(int expected, int value, const char *const message)
+{
+    if (expected != value)
+        fprintf(stderr, "%s - expected: %d, value: %d\n", message, expected, value);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2)
@@ -47,26 +54,47 @@ int main(int argc, char **argv)
 
     lseek(fd, 0L, SEEK_SET);
     ret = check_archive(fd);
-    printf("check_archive returned %d\n", ret);
+    assertEquals(5, ret, "check_archive error");
 
     lseek(fd, 0L, SEEK_SET);
     ret = exists(fd, "ok/");
-    printf("exists returned %d\n", ret);
+    assertEquals(1, ret, "exists error");
 
     lseek(fd, 0L, SEEK_SET);
     ret = exists(fd, "ok/ok_file.c");
-    printf("exists returned %d\n", ret);
+    assertEquals(1, ret, "exists error");
 
     lseek(fd, 0L, SEEK_SET);
     ret = exists(fd, "nope");
-    printf("exists returned %d\n", ret);
+    assertEquals(0, ret, "exists error");
 
-    lseek(fd, 0L, SEEK_SET);
     uint8_t buffer[4];
     size_t len = 4;
     size_t *len_ptr = &len;
-    ret = read_file(fd, "ok/ok_file.c", 1000, buffer, len_ptr);
-    printf("read_file returned %d\n", ret);
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = read_file(fd, "ok_long.txt", 512, buffer, len_ptr);
+    assertEquals(0, ret, "read_file error");
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = read_file(fd, "ok/ok_file.c", 4, buffer, len_ptr);
+    assertEquals(0, ret, "read_file error");
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = read_file(fd, "ok/ok_file2.c", 2, buffer, len_ptr);
+    assertEquals(2, ret, "read_file error");
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = read_file(fd, "ok_long.txt", 1000, buffer, len_ptr);
+    assertEquals(-2, ret, "read_file error");
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = read_file(fd, "ok/ok_file.c", 5, buffer, len_ptr);
+    assertEquals(-2, ret, "read_file error");
+
+    lseek(fd, 0L, SEEK_SET);
+    ret = read_file(fd, "ok/ok_file2.c", 5, buffer, len_ptr);
+    assertEquals(-2, ret, "read_file error");
 
     close(fd);
 

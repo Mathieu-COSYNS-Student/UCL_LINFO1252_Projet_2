@@ -166,7 +166,7 @@ int exists(int tar_fd, char *path)
     return exists_h(tar_fd, path, &tar_header);
 }
 
-bool check_is_dir(const tar_header_t *tar_header)
+bool check_is_dir(const tar_header_t *const tar_header)
 {
     return tar_header->typeflag == DIRTYPE;
 }
@@ -186,7 +186,7 @@ int is_dir(int tar_fd, char *path)
     return exists_h(tar_fd, path, &tar_header) && check_is_dir(&tar_header);
 }
 
-bool check_is_file(tar_header_t *tar_header)
+bool check_is_file(const tar_header_t *const tar_header)
 {
     return tar_header->typeflag == REGTYPE || tar_header->typeflag == AREGTYPE;
 }
@@ -206,7 +206,7 @@ int is_file(int tar_fd, char *path)
     return exists_h(tar_fd, path, &tar_header) && check_is_file(&tar_header);
 }
 
-bool check_is_symlink(tar_header_t *tar_header)
+bool check_is_symlink(const tar_header_t *const tar_header)
 {
     return tar_header->typeflag == LNKTYPE || tar_header->typeflag == SYMTYPE;
 }
@@ -288,7 +288,7 @@ ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *
 
     long size = TAR_INT(tar_header.size);
 
-    if (offset >= size)
+    if (offset > size)
         return -2;
 
     lseek(tar_fd, offset, SEEK_CUR);
