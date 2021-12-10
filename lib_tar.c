@@ -272,6 +272,11 @@ int list(int tar_fd, char *path, char **entries, size_t *no_entries)
  */
 ssize_t read_file(int tar_fd, char *path, size_t offset, uint8_t *dest, size_t *len)
 {
+    if (lseek(tar_fd, 0L, SEEK_END) < offset)
+        return -2;
+
+    lseek(tar_fd, 0L, SEEK_SET);
+
     tar_header_t tar_header;
 
     if (!exists_h(tar_fd, path, &tar_header))
