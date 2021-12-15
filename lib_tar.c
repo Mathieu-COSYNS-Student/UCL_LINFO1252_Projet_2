@@ -249,7 +249,60 @@ int is_symlink(int tar_fd, char *path)
  */
 int list(int tar_fd, char *path, char **entries, size_t *no_entries)
 {
-    return 0;
+    tar_header_t tar_header;
+
+    if (!exists_h(tar_fd, path, &tar_header))
+    {
+        return 0;
+    }
+
+    if (check_is_symlink(&tar_header))
+    {
+        int linkname_len = strnlen(tar_header.linkname, NAMELEN);
+        tar_header.linkname[linkname_len] = '/';
+        lseek(tar_fd, 0L, SEEK_SET);
+        return list(tar_fd, tar_header.linkname, entries, no_entries);
+    }
+
+    if (!check_is_dir(&tar_header))
+        return 0;
+
+    if (*no_entries == 0)
+        return 1;
+
+    lseek(tar_fd, 0L, SEEK_SET);
+
+    __off_t end_of_file_empty_blocks_pos = get_end_of_file_empty_blocks_pos(tar_fd);
+    read_header(tar_fd, &tar_header);
+
+    int path_len = strnlen(path, NAMELEN);
+
+    int no_entries_read = 0;
+
+    do
+    {
+        if (!strncmp(path, tar_header.name, path_len) &&
+            strncmp(path, tar_header.name, NAMELEN))
+        {
+            int name_len = strnlen(tar_header.name, NAMELEN);
+            bool not_subdir = true;
+            for (size_t i = path_len + 1; i < name_len; i++)
+            {
+                if (tar_header.name[i - 1] == '/')
+                {
+                    not_subdir = false;
+                    break;
+                }
+            }
+
+            if (not_subdir)
+                strcpy(entries[no_entries_read++], tar_header.name);
+        }
+    } while (no_entries_read < *no_entries && seek_and_read_header(tar_fd, &tar_header, end_of_file_empty_blocks_pos));
+
+    *no_entries = no_entries_read;
+
+    return 1;
 }
 
 /**

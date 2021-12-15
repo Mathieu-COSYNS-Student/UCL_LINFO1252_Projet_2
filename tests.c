@@ -1,8 +1,10 @@
+#include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include "lib_tar.h"
 
@@ -95,6 +97,33 @@ int main(int argc, char **argv)
     lseek(fd, 0L, SEEK_SET);
     ret = read_file(fd, "ok/ok_file2.c", 5, buffer, len_ptr);
     assertEquals(-2, ret, "read_file error");
+
+    lseek(fd, 0L, SEEK_SET);
+
+    char *entries[4];
+
+    for (size_t i = 0; i < 4; i++)
+    {
+        if (!(entries[i] = malloc(NAMELEN * sizeof(char))))
+        {
+            perror("Malloc failed");
+            exit(1);
+        }
+    }
+
+    size_t no_entries = 5;
+    char *path = "ok2";
+    assertEquals(0, list(fd, path, entries, &no_entries), "list error");
+
+    for (size_t i = 0; i < no_entries; i++)
+    {
+        printf("%s\n", entries[i]);
+    }
+
+    for (size_t i = 0; i < 4; i++)
+    {
+        free(entries[i]);
+    }
 
     close(fd);
 
